@@ -196,6 +196,7 @@ knowledge/
 15 FAQ rows
 10 error recipes
 40 evaluation questions
+60 public learner-question seeds
 ```
 
 要让它真正好用，按这个顺序补数据：

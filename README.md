@@ -198,6 +198,7 @@ Seed data included:
 15 FAQ rows
 10 error recipes
 40 evaluation questions
+60 public learner-question seeds
 ```
 
 To make the tutor useful, add real course assets in this order:
