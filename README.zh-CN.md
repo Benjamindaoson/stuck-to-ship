@@ -300,7 +300,7 @@ STUCKTOSHIP_MILVUS_URI=./stucktoship_milvus.db
 STUCKTOSHIP_API_KEYS=
 ```
 
-只要是 OpenAI-compatible 模型服务都可以接：Ollama、DashScope、OpenAI-compatible gateway 或你自己的代理。
+只要是 OpenAI-compatible 模型服务都可以接：DeepSeek、Ollama、DashScope、OpenAI-compatible gateway 或你自己的代理。如果系统环境变量里已有 `DEEPSEEK_API_KEY`，且没有设置 `LLM_API_KEY`，应用会直接使用 `DEEPSEEK_API_KEY`。
 
 ## 路线图
 

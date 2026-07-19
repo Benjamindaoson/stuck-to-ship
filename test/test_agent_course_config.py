@@ -51,3 +51,23 @@ def test_stucktoship_api_keys_are_comma_separated():
     )
 
     assert result.stdout.strip() == "one,three,two"
+
+
+def test_deepseek_api_key_is_llm_api_key_fallback():
+    import os
+    import subprocess
+    import sys
+
+    env = os.environ.copy()
+    env.pop("LLM_API_KEY", None)
+    env["DEEPSEEK_API_KEY"] = "deepseek-test-key"
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import config; print(config.settings.LLM_API_KEY)"],
+        capture_output=True,
+        check=True,
+        env=env,
+        text=True,
+    )
+
+    assert result.stdout.strip() == "deepseek-test-key"

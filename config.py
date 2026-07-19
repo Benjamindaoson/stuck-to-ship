@@ -16,10 +16,10 @@ class Settings:
     APP_NAME: str = os.getenv("APP_NAME", "StuckToShip")
 
     # ---------- LLM 配置（兼容 OpenAI API 格式）----------
-    # 阿里百炼: https://dashscope.aliyuncs.com/compatible-mode/v1
-    LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
-    LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "qwen-plus")
+    # 默认走 DeepSeek；也可通过 LLM_BASE_URL / LLM_MODEL 切换到其他 OpenAI-compatible 服务。
+    LLM_API_KEY: str = os.getenv("LLM_API_KEY") or os.getenv("DEEPSEEK_API_KEY", "")
+    LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "https://api.deepseek.com")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "deepseek-v4-flash")
     # 模型上下文窗口上限（token 数），用于自动裁剪超长历史消息。
     # 默认 8192 是保守值，实际模型如 deepseek-v4-flash / qwen-plus 支持 128K+，
     # 可按模型实际窗口设置：LLM_MAX_CONTEXT_TOKENS=131072

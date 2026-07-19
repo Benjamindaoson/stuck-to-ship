@@ -300,7 +300,7 @@ STUCKTOSHIP_MILVUS_URI=./stucktoship_milvus.db
 STUCKTOSHIP_API_KEYS=
 ```
 
-Use any OpenAI-compatible model server: Ollama, DashScope, OpenAI-compatible gateways, or your own proxy.
+Use any OpenAI-compatible model server: DeepSeek, Ollama, DashScope, OpenAI-compatible gateways, or your own proxy. If `DEEPSEEK_API_KEY` is already in the environment, the app uses it when `LLM_API_KEY` is not set.
 
 ## Roadmap
 
