@@ -8,6 +8,7 @@ from pathlib import Path
 def test_production_env_example_and_readiness_check_exist():
     assert Path(".env.production.example").exists()
     assert Path("scripts/check_production_ready.py").exists()
+    assert Path("scripts/bootstrap_production_env.py").exists()
     assert Path("docs/production-readiness.md").exists()
 
 
@@ -117,3 +118,25 @@ def test_production_readiness_check_accepts_deepseek_alias(tmp_path):
 
     assert result.returncode == 0
     assert payload["ok"] is True
+
+
+def test_bootstrap_production_env_generates_local_api_key(tmp_path):
+    env_file = tmp_path / ".env.production"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/bootstrap_production_env.py",
+            "--output",
+            str(env_file),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    content = env_file.read_text(encoding="utf-8")
+
+    assert "created:" in result.stdout
+    assert "STUCKTOSHIP_API_KEYS=" in content
+    assert "replace-with-long-random-api-key" not in content
+    assert "DEEPSEEK_API_KEY=" not in content

@@ -31,6 +31,13 @@ notepad .env.production
 
 The check does not contact paid services. It only catches missing placeholders, missing local data paths, and missing deployment files.
 
+Or generate a local `.env.production` with a random `STUCKTOSHIP_API_KEYS` value:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\bootstrap_production_env.py
+.\.venv\Scripts\python.exe scripts\check_production_ready.py --env-file .env.production
+```
+
 ## Minimal server deploy
 
 ```powershell
