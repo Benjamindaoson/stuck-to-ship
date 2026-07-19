@@ -83,12 +83,12 @@ def _should_disable_local_vector_store() -> bool:
     )
 
 
-def init_rag_graph_sync(vector_store):
+def init_rag_graph_sync(vector_store, qa_orchestrator: Any | None = None):
     """同步初始化 LangGraph 工作流"""
     from core.graph import build_rag_graph
 
     logger.info("正在构建 RAG 工作流...")
-    graph = build_rag_graph(vector_store)
+    graph = build_rag_graph(vector_store, qa_orchestrator=qa_orchestrator)
     logger.info("RAG 工作流构建完成")
     return graph
 
@@ -112,8 +112,8 @@ def build_app_state(
     from services.rag_service import RAGService
 
     vector_store = vector_store or init_vector_store_sync()
-    rag_graph = rag_graph or init_rag_graph_sync(vector_store)
     qa_orchestrator = qa_orchestrator or init_agent_course_orchestrator_sync()
+    rag_graph = rag_graph or init_rag_graph_sync(vector_store, qa_orchestrator)
     return AppState(
         vector_store=vector_store,
         rag_graph=rag_graph,

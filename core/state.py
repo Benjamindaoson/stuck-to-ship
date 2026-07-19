@@ -1,6 +1,6 @@
 """Shared state definitions for the RAG workflow."""
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 
 MAX_ROUNDS = 10
@@ -13,6 +13,8 @@ class RAGState(TypedDict):
     subject: str | None
     grade: str | None
     session_id: str
+    route: str
+    trace: dict[str, Any]
     intent: str
     complexity: str
     retrieved_docs: list
@@ -24,6 +26,13 @@ class RAGState(TypedDict):
     retrieval_attempts: list[dict]
     retrieval_metrics: dict
     retrieval_decision: dict
+    normalized_evidence: list[dict]
+    selected_tools: list[str]
+    planner_budget: dict[str, int]
+    gate_decision: dict[str, Any]
+    citations: list[dict]
+    redacted_trace: dict[str, Any]
+    fast_path_result: bool
     abstain_reason: str
     retrieval_latency_ms: float
     rerank_latency_ms: float

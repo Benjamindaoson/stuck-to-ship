@@ -17,6 +17,7 @@ from core.nodes.chitchat import chitchat_node
 from core.nodes.generator import generate_sub_answers, llm_generate_stream, synthesize_final_answer
 from core.nodes.query_classifier import classify_intent_async, classify_query_with_fallback
 from core.nodes.retriever import build_retry_plan, hybrid_retrieve
+from core.qa_orchestrator import QAOrchestrator, QAResult
 from core.reranker import CrossEncoderReranker, RerankerUnavailableError
 from core.retrieval_quality import evaluate_retrieval_gate
 from core.state import MAX_ROUNDS, RAGState
@@ -53,6 +54,65 @@ async def classify_node(state: RAGState) -> dict:
         state["query"][:50],
     )
     return {"intent": intent, "complexity": complexity}
+
+
+async def fast_path_node(state: RAGState, qa_orchestrator: QAOrchestrator | None) -> dict:
+    """Deterministic FAQ/error/code/course answers inside the graph path."""
+    if qa_orchestrator is None:
+        return {"fast_path_result": False}
+    result = qa_orchestrator.answer(
+        state["query"],
+        session_id=state.get("session_id"),
+        user_id=None,
+    )
+    if not _should_return_fast_path_result(result):
+        return {"fast_path_result": False, "route": result.route}
+    return _graph_state_from_qa_result(result)
+
+
+def _should_return_fast_path_result(result: QAResult) -> bool:
+    if result.route == "clarify":
+        return True
+    if result.route in {"code", "faq", "error"}:
+        return result.needs_clarification or bool(result.citations)
+    if result.route in {"course", "learning_path"}:
+        return bool(result.citations)
+    return False
+
+
+def _graph_state_from_qa_result(result: QAResult) -> dict:
+    accepted = not result.needs_clarification and bool(result.citations)
+    action = "accept" if accepted else ("clarify" if result.route == "clarify" else "clarify_or_refuse")
+    return {
+        "answer": result.answer,
+        "route": result.route,
+        "trace": result.trace,
+        "retrieved_docs": [_citation_to_doc(item) for item in result.citations],
+        "citations": result.citations,
+        "retrieval_decision": {
+            "action": action,
+            "reason_codes": [result.route],
+            "metrics": {"candidate_count": len(result.citations)},
+            "suggested_strategy": None,
+        },
+        "fast_path_result": True,
+    }
+
+
+def _citation_to_doc(citation: dict) -> dict:
+    source_path = citation.get("source_path") or citation.get("source_file") or ""
+    return {
+        "id": source_path,
+        "doc_id": source_path,
+        "text": citation.get("text") or "",
+        "source_file": source_path,
+        "source_path": source_path,
+        "chapter": citation.get("title") or "",
+        "score": citation.get("score") or 0.0,
+        "source_type": citation.get("source_type") or "",
+        "start_line": citation.get("start_line"),
+        "end_line": citation.get("end_line"),
+    }
 
 async def retrieve_node(state: RAGState, vector_store: StuckToShipVectorStore) -> dict:
     """候选召回节点：只负责召回，不在这里做质量判断。"""
@@ -311,6 +371,7 @@ def build_rag_graph(
     vector_store: StuckToShipVectorStore,
     reranker: CrossEncoderReranker | None = None,
     *,
+    qa_orchestrator: QAOrchestrator | None = None,
     checkpointer=None,
 ):
     """构建 RAG 图，并通过闭包注入不可序列化的运行时依赖。"""
@@ -328,8 +389,12 @@ def build_rag_graph(
     async def rerank_with_model(state: RAGState) -> dict:
         return await rerank_node(state, reranker)
 
+    async def fast_path_with_orchestrator(state: RAGState) -> dict:
+        return await fast_path_node(state, qa_orchestrator)
+
     workflow = StateGraph(RAGState)
     workflow.add_node("classify", classify_node)
+    workflow.add_node("fast_path", fast_path_with_orchestrator)
     workflow.add_node("retrieve", retrieve_with_store)
     workflow.add_node("rerank", rerank_with_model)
     workflow.add_node("retrieval_gate", retrieval_gate_node)
@@ -338,7 +403,12 @@ def build_rag_graph(
     workflow.add_node("abstain", abstain_node)
     workflow.add_node("chitchat", chitchat_node)
     workflow.add_node("finalize", finalize_node)
-    workflow.set_entry_point("classify")
+    workflow.set_entry_point("fast_path")
+    workflow.add_conditional_edges(
+        "fast_path",
+        lambda state: "finalize" if state.get("fast_path_result") else "classify",
+        {"finalize": "finalize", "classify": "classify"},
+    )
     workflow.add_conditional_edges(
         "classify",
         lambda state: "retrieve" if state.get("intent") == "educational" else "chitchat",

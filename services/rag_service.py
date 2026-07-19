@@ -7,7 +7,7 @@ import uuid
 from typing import AsyncGenerator, Any, TYPE_CHECKING
 
 from config import settings
-from core.qa_orchestrator import QAOrchestrator, QAResult
+from core.qa_orchestrator import QAOrchestrator
 from core.state import RAGState
 from core.stream_queue import stream_queues
 from models.db_models import AutoEvalSample, QARecord, get_session_maker
@@ -26,6 +26,7 @@ def format_references(docs: list[dict]) -> list[dict]:
             "chunk_id": doc.get("id"),
             "text": doc.get("text", "")[:200],
             "source_file": doc.get("source_file") or doc.get("doc_id") or "未知来源",
+            "source_path": doc.get("source_path") or doc.get("source_file") or doc.get("doc_id") or "",
             "page": doc.get("page", 0),
             "chapter": doc.get("chapter", ""),
             "score": round(
@@ -34,37 +35,12 @@ def format_references(docs: list[dict]) -> list[dict]:
             ),
             "subject": doc.get("subject", ""),
             "grade": doc.get("grade", ""),
+            "source_type": doc.get("source_type", ""),
+            "start_line": doc.get("start_line"),
+            "end_line": doc.get("end_line"),
         }
         reference["source"] = doc.get("doc_id", "")
         references.append(reference)
-    return references
-
-
-def _format_citations(citations: list[dict]) -> list[dict]:
-    references = []
-    for citation in citations:
-        source_path = citation.get("source_path") or citation.get("source_file") or ""
-        line = citation.get("start_line")
-        end_line = citation.get("end_line")
-        if line and end_line and end_line != line:
-            line_text = f"lines {line}-{end_line}"
-        elif line:
-            line_text = f"line {line}"
-        else:
-            line_text = ""
-        references.append(
-            {
-                "index": len(references) + 1,
-                "text": str(citation.get("text") or "")[:400],
-                "source_file": source_path,
-                "source_path": source_path,
-                "chapter": citation.get("title") or line_text,
-                "score": round(float(citation.get("score") or 0.0), 4),
-                "source_type": citation.get("source_type") or "",
-                "start_line": citation.get("start_line"),
-                "end_line": citation.get("end_line"),
-            }
-        )
     return references
 
 
@@ -103,6 +79,8 @@ class RAGService:
             "session_id": session_id,
             "intent": "",
             "complexity": "",
+            "route": "",
+            "trace": {},
             "retrieved_docs": [],
             "answer": "",
             "retry_count": 0,
@@ -111,6 +89,13 @@ class RAGService:
             "retrieval_attempts": [],
             "retrieval_metrics": {},
             "retrieval_decision": {},
+            "normalized_evidence": [],
+            "selected_tools": [],
+            "planner_budget": {},
+            "gate_decision": {},
+            "citations": [],
+            "redacted_trace": {},
+            "fast_path_result": False,
             "abstain_reason": "",
             "sub_queries": [],
             "_queue_id": "",
@@ -137,10 +122,6 @@ class RAGService:
 
         session_id = self.resolve_session_id(session_id, user_id)
         logger.info("会话解析完成: session_id=%s", session_id)
-        orchestrated = self.qa_orchestrator.answer(query, session_id=session_id, user_id=user_id)
-        if self._should_return_orchestrator_result(orchestrated):
-            elapsed = int((time.time() - start_time) * 1000)
-            return self._format_orchestrator_response(orchestrated, elapsed, session_id)
 
         initial_state = self._build_initial_state(query, subject, grade, session_id)
         config = {"configurable": {"thread_id": session_id}}
@@ -206,35 +187,9 @@ class RAGService:
             "references": references,
             "latency_ms": elapsed,
             "complexity": final_state.get("complexity", "medium"),
+            "route": final_state.get("route", final_state.get("complexity", "medium")),
+            "trace": final_state.get("trace"),
             "record_id": record_id,
-            "session_id": session_id,
-        }
-
-    @staticmethod
-    def _should_return_orchestrator_result(result: QAResult) -> bool:
-        if result.route == "clarify":
-            return True
-        if result.route in {"code", "faq", "error"}:
-            return result.needs_clarification or bool(result.citations)
-        if result.route in {"course", "learning_path"}:
-            return bool(result.citations)
-        return False
-
-    @staticmethod
-    def _format_orchestrator_response(
-        result: QAResult,
-        latency_ms: int,
-        session_id: str,
-    ) -> dict:
-        trace = {**result.trace, "latency_ms": latency_ms}
-        return {
-            "answer": result.answer,
-            "references": _format_citations(result.citations),
-            "latency_ms": latency_ms,
-            "complexity": result.route,
-            "route": result.route,
-            "trace": trace,
-            "record_id": None,
             "session_id": session_id,
         }
 
@@ -270,16 +225,6 @@ class RAGService:
 
         session_id = self.resolve_session_id(session_id, user_id)
         logger.info("流式会话解析完成: session_id=%s, queue_id=%s", session_id, queue_id)
-
-        orchestrated = self.qa_orchestrator.answer(query, session_id=session_id, user_id=user_id)
-        if self._should_return_orchestrator_result(orchestrated):
-            elapsed = int((time.time() - start_time) * 1000)
-            result = self._format_orchestrator_response(orchestrated, elapsed, session_id)
-            stream_queues.remove(queue_id)
-            yield _sse("status", {"status": "retrieved", "message": "Using cited Agent course evidence."})
-            yield _sse("token", {"token": result["answer"]})
-            yield _sse("done", result)
-            return
 
         initial_state = self._build_initial_state(query, subject, grade, session_id)
         initial_state["_queue_id"] = queue_id
@@ -354,6 +299,8 @@ class RAGService:
             final_complexity = final_state.get("complexity", "medium")
 
         elapsed = int((time.time() - start_time) * 1000)
+        if not full_answer and final_answer:
+            yield _sse("token", {"token": final_answer})
 
         # 保存数据库记录
         record_id = None
@@ -397,6 +344,8 @@ class RAGService:
             "references": references,
             "latency_ms": elapsed,
             "complexity": final_complexity,
+            "route": final_state.get("route", final_complexity),
+            "trace": final_state.get("trace"),
             "record_id": record_id,
             "session_id": session_id,
         })

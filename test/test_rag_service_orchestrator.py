@@ -1,79 +1,47 @@
 import asyncio
 
-from core.qa_orchestrator import QAResult
 from services.rag_service import RAGService
 
 
-class ShouldNotRunGraph:
-    async def ainvoke(self, *args, **kwargs):
-        raise AssertionError("LangGraph path should not run for orchestrator-routed answers")
-
-
-class StubOrchestrator:
-    def answer(self, query, session_id=None, user_id=None):
-        return QAResult(
-            answer="请补充具体课程、代码文件或报错信息。",
-            route="clarify",
-            citations=[],
-            trace={
-                "query": query,
-                "session_id": session_id,
-                "route": "clarify",
-                "decision": "clarify",
-                "latency_ms": 0,
-            },
-            needs_clarification=True,
-        )
-
-
-class StubCitationOrchestrator:
-    def answer(self, query, session_id=None, user_id=None):
-        return QAResult(
-            answer="Set LLM_API_KEY in .env.",
-            route="faq",
-            citations=[
+class GraphResult:
+    async def ainvoke(self, initial_state, config):
+        return {
+            **initial_state,
+            "answer": "Set LLM_API_KEY in .env.",
+            "retrieved_docs": [
                 {
+                    "id": "knowledge/faq/mvp.jsonl",
+                    "text": "Set LLM_API_KEY in .env.",
+                    "source_file": "knowledge/faq/mvp.jsonl",
                     "source_path": "knowledge/faq/mvp.jsonl",
-                    "title": "FAQ",
-                    "source_type": "faq",
-                    "start_line": None,
-                    "end_line": None,
                     "score": 1.0,
+                    "source_type": "faq",
                 }
             ],
-            trace={
-                "query": query,
-                "session_id": session_id,
-                "route": "faq",
-                "decision": "accept",
-                "latency_ms": 0,
-            },
-            needs_clarification=False,
-        )
+            "route": "faq",
+            "trace": {"route": "faq"},
+            "complexity": "faq",
+            "retrieval_decision": {"action": "accept"},
+        }
+
+    async def astream(self, initial_state, config, stream_mode="values"):
+        yield await self.ainvoke(initial_state, config)
 
 
-def test_rag_service_returns_orchestrator_result_before_langgraph():
-    service = RAGService(
-        vector_store=None,
-        rag_graph=ShouldNotRunGraph(),
-        qa_orchestrator=StubOrchestrator(),
-    )
+def test_rag_service_returns_graph_result():
+    service = RAGService(vector_store=None, rag_graph=GraphResult())
 
-    result = asyncio.run(service.ask("这个怎么弄？", session_id="s1"))
+    result = asyncio.run(service.ask("How do I configure DashScope API Key?", session_id="s1"))
 
-    assert result["answer"] == "请补充具体课程、代码文件或报错信息。"
-    assert result["references"] == []
-    assert result["route"] == "clarify"
-    assert result["trace"]["decision"] == "clarify"
+    assert result["answer"] == "Set LLM_API_KEY in .env."
+    assert result["references"][0]["source_path"] == "knowledge/faq/mvp.jsonl"
+    assert result["route"] == "faq"
+    assert result["trace"]["route"] == "faq"
     assert result["session_id"] == "s1"
 
 
-def test_rag_service_stream_returns_orchestrator_result_before_langgraph():
-    service = RAGService(
-        vector_store=None,
-        rag_graph=ShouldNotRunGraph(),
-        qa_orchestrator=StubCitationOrchestrator(),
-    )
+def test_rag_service_stream_returns_graph_result():
+    service = RAGService(vector_store=None, rag_graph=GraphResult())
 
     async def collect():
         chunks = []
@@ -83,6 +51,7 @@ def test_rag_service_stream_returns_orchestrator_result_before_langgraph():
 
     stream = asyncio.run(collect())
 
+    assert "event: token" in stream
     assert "event: done" in stream
     assert '"answer": "Set LLM_API_KEY in .env."' in stream
     assert '"route": "faq"' in stream

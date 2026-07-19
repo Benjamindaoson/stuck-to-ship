@@ -165,6 +165,49 @@ flowchart LR
   A --> O["Answer + references + trace"]
 ```
 
+### Evolution Architecture: One Teaching RAG Engine
+
+The next phase will not build Hybrid RAG, GraphRAG, Agentic RAG, and Multimodal RAG as four separate systems. A bounded teaching agent will select the retrieval capability that fits the learner's question, while evidence grading, corrective retries, refusal, and automated evaluation remain shared quality controls.
+
+> This is the target architecture. Hybrid retrieval, corrective gating, and evaluation already have implementation foundations; GraphRAG, the Agent Planner, and multimodal retrieval remain on the roadmap.
+
+```mermaid
+flowchart TD
+    Q["Learner question / image / code / error"] --> U["Unified intent analysis and clarification"]
+    U --> P["Budget-bounded Agent Planner"]
+
+    P --> H["Hybrid Retriever"]
+    P --> G["Concept + Code Graph Retriever"]
+    P --> C["AST / Code Retriever"]
+    P --> M["Multimodal Retriever"]
+    P --> F["FAQ / Error Retriever"]
+
+    H --> X["Unified EvidenceSet"]
+    G --> X
+    C --> X
+    M --> X
+    F --> X
+
+    X --> R["Fusion, deduplication + Cross-Encoder Rerank"]
+    R --> E["Corrective Evidence Grader"]
+
+    E -->|Sufficient evidence| A["Teaching-oriented answer generation"]
+    E -->|Coverage gap| P
+    E -->|Ambiguous question| Q2["Clarifying question"]
+    E -->|No reliable evidence| N["Explicit refusal"]
+
+    A --> O["Answer + line/page/timestamp + next exercise"]
+    O --> V["Automated evaluation and feedback loop"]
+```
+
+| Retrieval capability | Problem it solves | Status |
+|---|---|---|
+| Hybrid RAG | Understands both concepts and exact API names, file names, and error terms | Dense, BM25, RRF, and rerank foundations exist; main tutor flow is not unified yet |
+| GraphRAG | Answers prerequisite, concept-relation, call-chain, and configuration-dependency questions | Planned |
+| Agentic RAG | Selects course, code, graph, error, and multimodal tools for each question | Planned |
+| Multimodal RAG | Understands diagrams, slides, code screenshots, and course videos | Planned |
+| Corrective RAG | Rewrites, changes retrieval strategy, clarifies, or refuses when evidence is weak | Quality gate and bounded retries exist |
+
 Important files:
 
 | File | Purpose |
@@ -311,7 +354,10 @@ Use any OpenAI-compatible model server: DeepSeek, Ollama, DashScope, OpenAI-comp
 - [x] Course-data import CLI
 - [x] Prompt-injection guard for retrieved documents
 - [x] API key auth, basic document ACL, and production Docker template
-- [ ] Better hybrid retrieval and rerank dashboard
+- [ ] Unify the course tutor and LangGraph flows with full Hybrid RAG and rerank evaluation
+- [ ] Build AI concept and code-call graphs for teaching-focused GraphRAG
+- [ ] Add an Agent Planner with tool budgets, stop conditions, and a trusted-tool allowlist
+- [ ] Support PDF/PPT diagrams, code screenshots, and video timestamps with Multimodal RAG
 - [ ] Dataset, chunk, prompt, and model versioning
 - [ ] Feedback-to-FAQ and feedback-to-error-recipe workflow
 

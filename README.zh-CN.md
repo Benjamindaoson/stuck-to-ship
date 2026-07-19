@@ -163,6 +163,49 @@ flowchart LR
   A --> O["答案 + 引用 + Trace"]
 ```
 
+### 演进架构：统一教学 RAG 引擎
+
+下一阶段不会把 Hybrid RAG、GraphRAG、Agentic RAG 和 Multimodal RAG 做成四套独立系统，而是让一个受控的教学 Agent 根据问题选择合适的检索能力。现有的证据门控、纠错重试、拒答和自动化评测将成为所有检索路径共用的质量护栏。
+
+> 下面是目标架构。Hybrid 检索、纠错门控和评测已有实现基础；GraphRAG、Agent Planner 和多模态检索仍在路线图中。
+
+```mermaid
+flowchart TD
+    Q["学员问题 / 图片 / 代码 / 报错"] --> U["统一意图分析与必要澄清"]
+    U --> P["受预算约束的 Agent Planner"]
+
+    P --> H["Hybrid Retriever"]
+    P --> G["Concept + Code Graph Retriever"]
+    P --> C["AST / Code Retriever"]
+    P --> M["Multimodal Retriever"]
+    P --> F["FAQ / Error Retriever"]
+
+    H --> X["统一 EvidenceSet"]
+    G --> X
+    C --> X
+    M --> X
+    F --> X
+
+    X --> R["融合去重 + Cross-Encoder Rerank"]
+    R --> E["Corrective Evidence Grader"]
+
+    E -->|证据充分| A["教学型答案生成"]
+    E -->|覆盖不足| P
+    E -->|问题模糊| Q2["追问澄清"]
+    E -->|没有可靠证据| N["明确拒答"]
+
+    A --> O["答案 + 行号/页码/时间戳 + 下一步练习"]
+    O --> V["自动化评测与反馈闭环"]
+```
+
+| 检索能力 | 解决的问题 | 状态 |
+|---|---|---|
+| Hybrid RAG | 同时理解概念语义和 API、文件名、报错关键词 | 已有 dense、BM25、RRF 和 rerank 基础，待统一到课程助教主链路 |
+| GraphRAG | 回答先修关系、概念关系、代码调用链和配置依赖 | 规划中 |
+| Agentic RAG | 按问题动态选择课程、代码、图谱、报错和多模态工具 | 规划中 |
+| Multimodal RAG | 理解 PDF/PPT 中的图表、架构图、代码截图和课程视频 | 规划中 |
+| Corrective RAG | 证据不足时改写、换检索策略、追问或拒答 | 已有质量门控和有限重试基础 |
+
 关键文件：
 
 | 文件 | 作用 |
@@ -311,7 +354,10 @@ STUCKTOSHIP_API_KEYS=
 - [x] 课程数据导入 CLI
 - [x] 检索文档 Prompt Injection 防护
 - [x] API Key 认证、基础文档 ACL、生产 Docker 模板
-- [ ] 更强的混合检索和 rerank 评估面板
+- [ ] 统一课程助教与 LangGraph 链路，完整接入 Hybrid RAG 和 rerank 评估
+- [ ] 构建 AI 概念图与代码调用图，支持教学型 GraphRAG
+- [ ] 增加有调用预算、停止条件和可信工具白名单的 Agent Planner
+- [ ] 支持 PDF/PPT 图表、代码截图和视频时间戳的 Multimodal RAG
 - [ ] 数据集、chunk、prompt、model 版本追踪
 - [ ] 反馈到 FAQ / error recipe 的半自动闭环
 
