@@ -1,13 +1,13 @@
-# 面试技术复盘：K12 教育 RAG 知识库问答系统
+﻿# 面试技术复盘：AI 工程课程 教育 RAG 知识库问答系统
 
-> 面试人：易鹏 | 面试官：博 | 项目：edu-rag（K12 教育领域 RAG 知识库问答系统）
+> 面试人：易鹏 | 面试官：博 | 项目：edu-rag（AI 工程课程 教育领域 RAG 知识库问答系统）
 > 复盘日期：2026-05-24
 
 ---
 
 ## 一、项目总览
 
-**项目定位**：面向 K12 教学内容的检索增强生成（RAG）服务，基于 LangGraph 编排问答流程，Milvus Lite 承载向量检索，BGE 模型提供 Embedding，LLM 通过 OpenAI 兼容 API 接入（默认阿里百炼 qwen-plus）。
+**项目定位**：面向 AI 工程课程 教学内容的检索增强生成（RAG）服务，基于 LangGraph 编排问答流程，Milvus Lite 承载向量检索，BGE 模型提供 Embedding，LLM 通过 OpenAI 兼容 API 接入（默认阿里百炼 qwen-plus）。
 
 **技术栈一览**：
 
@@ -103,7 +103,7 @@ KEYWORD_INTENT_MAP = [
 - 可配置 `DENSE_MIN_SIMILARITY` 阈值过滤低分结果
 
 **稀疏检索**：
-- 本地 BM25Okapi，内置在 K12VectorStore 中
+- 本地 BM25Okapi，内置在 StuckToShipVectorStore 中
 - 每次插入/删除后全量重建 BM25 索引（`_rebuild_bm25_index`）
 - 中文分词使用简单的二元组切分（非 jieba），注释明确写了"实际项目可使用 jieba"
 
@@ -244,14 +244,14 @@ if len(history) > max_msgs:
 
 在面试中易鹏说"选用 Milvus 主要基于业务适配性和 K8s 部署优势"。实际代码使用的是 **Milvus Lite**（嵌入式版本）：
 
-- 免去独立部署向量服务，数据存储在本地文件（`milvus_k12.db`）
+- 免去独立部署向量服务，数据存储在本地文件（`milvus_AI 工程课程.db`）
 - 索引类型 IVF_FLAT，metric COSINE，nlist=128
 - 适用于单机中小规模数据集
 - README 明确写了：超高并发或多副本部署应迁移至 Milvus 集群形态
 
 ### 面试复盘要点
 
-- 如果被问"为什么不用 Milvus 集群版/其他向量库"：Milvus Lite 适合当前业务量（中小规模 K12 教育数据），零运维成本；业务量增长后可平滑升级到 Milvus 集群。竞品方面，Faiss 缺少标量过滤能力，Chroma 的混合检索生态不如 Milvus 完善。
+- 如果被问"为什么不用 Milvus 集群版/其他向量库"：Milvus Lite 适合当前业务量（中小规模 AI 工程课程 教育数据），零运维成本；业务量增长后可平滑升级到 Milvus 集群。竞品方面，Faiss 缺少标量过滤能力，Chroma 的混合检索生态不如 Milvus 完善。
 - "HNSW 索引兼顾速度与精度"——但当前代码使用的是 **IVF_FLAT**，不是 HNSW。这是一个需要纠正的表述。IVF_FLAT 是倒排索引+精确计算，HNSW 是图索引。两者差异：HNSW 构建慢但查询快且召回率高，IVF_FLAT 更简单但需要合理的 nlist 配置。
 
 ---
@@ -284,7 +284,7 @@ if len(history) > max_msgs:
 └─────────────────────────────────────────────────────────────┘
                          │
 ┌────────────────────────▼───────────────────────────────────┐
-│                K12VectorStore (数据层)                       │
+│                StuckToShipVectorStore (数据层)                       │
 │   Milvus Lite (稠密) + BM25Okapi (稀疏) + RRF 融合          │
 │   BGE Embedding (sentence-transformers)                     │
 │   SQLite (业务库: QA记录/文档/评估/知识点)                   │
@@ -374,7 +374,7 @@ if len(history) > max_msgs:
 
 **一、部署成本：嵌入式优先**
 
-Milvus Lite 是嵌入式模式，`pip install pymilvus` 即可使用，数据存储在本地单文件（`milvus_k12.db`），不需要单独部署服务进程。对于我们当时团队规模小、业务数据量不大的场景，零运维成本是最高优先级。对比 Qdrant、Weaviate 都需要 Docker 或独立服务部署，Pinecone 是云托管付费服务——都偏重。
+Milvus Lite 是嵌入式模式，`pip install pymilvus` 即可使用，数据存储在本地单文件（`milvus_AI 工程课程.db`），不需要单独部署服务进程。对于我们当时团队规模小、业务数据量不大的场景，零运维成本是最高优先级。对比 Qdrant、Weaviate 都需要 Docker 或独立服务部署，Pinecone 是云托管付费服务——都偏重。
 
 **二、标量过滤能力：教育场景的刚需**
 
@@ -406,7 +406,7 @@ Milvus 是 LF AI & Data 基金会毕业项目（CNCF 体系），背后的 Zilli
 
 ### 当前索引选择的说明
 
-代码中实际使用的是 **IVF_FLAT**（倒排索引+精确距离计算），nlist=128，metric_type=COSINE。选 IVF_FLAT 而不是 HNSW 的原因：当前数据量不大（K12 教材语料），IVF_FLAT 构建快、内存占用小，召回率可满足需求。数据量到百万级以后可以切换为 HNSW（查询更快、召回率更高）。
+代码中实际使用的是 **IVF_FLAT**（倒排索引+精确距离计算），nlist=128，metric_type=COSINE。选 IVF_FLAT 而不是 HNSW 的原因：当前数据量不大（AI 工程课程 教材语料），IVF_FLAT 构建快、内存占用小，召回率可满足需求。数据量到百万级以后可以切换为 HNSW（查询更快、召回率更高）。
 
 ### 面试中易忽略的点
 
@@ -443,7 +443,7 @@ BGE 中文有三个规格：
 | bge-base-zh-v1.5 | 102M | 768 | ~400MB | 平衡性能与资源 |
 | bge-large-zh-v1.5 | 326M | 1024 | ~1.3GB | GPU推理、追求极致效果 |
 
-选 small 的原因是：首先，K12 教育领域的语义空间相对收敛（教材术语体系固定），不需要 large 级别的语义粒度；其次，团队服务器没有 GPU，CPU 推理 small 规格单条查询 <50ms，base 要 200ms+；最后，向量维度 512 直接决定了 Milvus 索引大小——small 的内存和磁盘占用分别是 base 的 1/2、large 的 1/4，对于 Lite 模式很重要。
+选 small 的原因是：首先，AI 工程课程 教育领域的语义空间相对收敛（教材术语体系固定），不需要 large 级别的语义粒度；其次，团队服务器没有 GPU，CPU 推理 small 规格单条查询 <50ms，base 要 200ms+；最后，向量维度 512 直接决定了 Milvus 索引大小——small 的内存和磁盘占用分别是 base 的 1/2、large 的 1/4，对于 Lite 模式很重要。
 
 **四、BGE 的检索增强特性：Instruction-aware Encoding**
 
@@ -487,7 +487,7 @@ BGE 的 base/large 版本可作为性能升级路径，向量维度变化时需�
 
 **五维度评估模型**：
 
-1. **业务适配度**：技术方案是否能满足核心业务需求？（如 Milvus 的标量过滤满足学科/年级筛选，BGE 的中文优化满足 K12 教育场景）
+1. **业务适配度**：技术方案是否能满足核心业务需求？（如 Milvus 的标量过滤满足学科/年级筛选，BGE 的中文优化满足 AI 工程课程 教育场景）
 2. **团队能力匹配**：当前团队能否驾驭该技术？（小团队无专职运维 → 嵌入式方案优先）
 3. **成本约束**：是否有预算限制？（开源自建 vs API 付费；CPU 推理 vs GPU 需求）
 4. **扩展路径**：方案是否支持平滑升级？（Milvus Lite→Cluster 同 API；BGE small→base→large 同系列）

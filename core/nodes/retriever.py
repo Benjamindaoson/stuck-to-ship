@@ -1,4 +1,4 @@
-"""策略化检索与纠正重试规划。
+﻿"""策略化检索与纠正重试规划。
 
 本模块只负责“怎么召回候选”，不负责“候选是否足够可靠”。
 可靠性判断统一放在 `core.retrieval_quality`，避免多个阈值体系互相打架。
@@ -17,7 +17,7 @@ from core.strategies import (
     multi_query_fusion,
     select_strategy,
 )
-from core.vectorestore import K12VectorStore
+from core.vectorestore import StuckToShipVectorStore
 from utils.logger import logger
 
 
@@ -38,7 +38,7 @@ def _annotate(docs: list[dict], strategy: str, query_variant: str) -> list[dict]
 
 
 def _search(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     *,
     query: str,
     subject: str | None,
@@ -52,7 +52,7 @@ def _search(
 
 
 def _direct_retrieve(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     query: str,
     complexity: str,
     subject: str | None = None,
@@ -72,7 +72,7 @@ def _direct_retrieve(
 
 
 async def _multi_query_retrieve(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     query: str,
     complexity: str,
     subject: str | None = None,
@@ -101,7 +101,7 @@ async def _multi_query_retrieve(
 
 
 async def _decomposition_retrieve(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     query: str,
     complexity: str,
     subject: str | None = None,
@@ -196,7 +196,7 @@ async def build_retry_plan(
 
 
 async def _retrieve_from_plan(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     *,
     query: str,
     plan: dict,
@@ -231,7 +231,7 @@ async def _retrieve_from_plan(
 
 
 async def _retrieve_complex_repair(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     *,
     plan: dict,
     subject: str | None,
@@ -288,7 +288,7 @@ async def _retrieve_complex_repair(
 
 
 async def hybrid_retrieve(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     query: str,
     complexity: str,
     intent: str = "educational",

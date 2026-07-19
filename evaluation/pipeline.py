@@ -1,4 +1,4 @@
-"""评估流水线：支持 API 调用和 CLI 两种模式
+﻿"""评估流水线：支持 API 调用和 CLI 两种模式
 
 流程:
   1. 构建测试数据集 (from DB / from file / from manual)
@@ -18,7 +18,7 @@ from datasets import Dataset
 
 from config import settings
 from core.graph import build_rag_graph
-from core.vectorestore import K12VectorStore
+from core.vectorestore import StuckToShipVectorStore
 from evaluation.ragas_evaluator import RAGASEvaluator
 from evaluation.schemas import EvalResult, eval_result_to_dict, sanitize_for_json_storage
 from models.db_models import EvaluationRecord, get_session_maker
@@ -95,7 +95,7 @@ async def run_evaluation(
 
 async def run_live_evaluation(
     questions: list[str],
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     subject: str | None = None,
     grade: str | None = None,
     metrics: list[str] | None = None,

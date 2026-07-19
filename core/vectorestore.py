@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 from pymilvus import MilvusClient, DataType
 from rank_bm25 import BM25Okapi
 from core.embeddings import get_embedding_model, get_embedding_dim, embed_texts, embed_query
@@ -6,9 +6,9 @@ from utils.logger import logger
 from config import settings
 
 
-class K12VectorStore:
+class StuckToShipVectorStore:
     """
-    K12 混合向量存储：
+    AI 工程课程 混合向量存储：
     - 稠密检索：Milvus Lite（ANN 搜索）
     - 稀疏检索：本地 BM25（关键词搜索）
     - 融合策略：RRF（倒数排名融合）
@@ -28,7 +28,7 @@ class K12VectorStore:
         self.bm25_docs: list[dict] = []  # 与 BM25 对应的文档列表
         self.bm25_corpus: list[list[str]] = []  # 分词后的语料库
 
-        logger.info("K12VectorStore 初始化完成")
+        logger.info("StuckToShipVectorStore 初始化完成")
 
     # ==================== Milvus 集合管理 ====================
 

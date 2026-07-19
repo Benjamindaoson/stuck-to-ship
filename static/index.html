@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>K12 教育 RAG 系统</title>
+<title>StuckToShip - AI 工程课程助教</title>
+<link rel="icon" href="data:,">
 <style>
   :root {
     --primary: #1a56db;
@@ -96,6 +97,54 @@
   .main-header { margin-bottom: 28px; }
   .main-header h2 { font-size: 24px; font-weight: 700; }
   .main-header p { color: var(--gray-500); margin-top: 4px; font-size: 14px; }
+
+  .learning-hero {
+    margin-bottom: 18px;
+    padding: 18px 0 8px;
+  }
+  .learning-hero h2 {
+    font-size: 28px;
+    line-height: 1.2;
+    color: var(--gray-900);
+  }
+  .learning-hero p {
+    margin-top: 8px;
+    max-width: 760px;
+    color: var(--gray-600);
+    line-height: 1.7;
+  }
+  .stuck-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 16px 0 18px;
+  }
+  .stuck-card {
+    min-height: 96px;
+    padding: 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: border .15s, box-shadow .15s, transform .15s;
+  }
+  .stuck-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+  }
+  .stuck-card strong {
+    display: block;
+    color: var(--gray-900);
+    font-size: 14px;
+  }
+  .stuck-card span {
+    display: block;
+    margin-top: 6px;
+    color: var(--gray-500);
+    font-size: 12px;
+    line-height: 1.5;
+  }
 
   /* Tab content */
   .tab-content { display: none; }
@@ -336,6 +385,38 @@
   }
   .message.assistant .message-meta {
     justify-content: flex-start;
+  }
+  .route-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .trace-preview {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .trace-preview summary {
+    cursor: pointer;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .trace-preview pre {
+    margin-top: 6px;
+    padding: 8px;
+    max-width: min(720px, 78vw);
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    background: var(--gray-50);
+    white-space: pre-wrap;
   }
 
   .message .feedback-btns {
@@ -724,6 +805,7 @@
     .sidebar-footer { display: none; }
     .main { padding: 16px; }
     .form-row { grid-template-columns: 1fr; }
+    .stuck-grid { grid-template-columns: 1fr 1fr; }
     .eval-auto-grid { grid-template-columns: 1fr; }
     .eval-mode-switch { width: 100%; }
     .eval-mode-btn { flex: 1; }
@@ -734,8 +816,8 @@
 
 <div class="sidebar">
   <div class="sidebar-brand">
-    <h1>K12 RAG 系统</h1>
-    <p>智能知识库问答平台</p>
+    <h1>StuckToShip</h1>
+    <p>从卡住到做出来</p>
   </div>
   <nav class="sidebar-nav">
     <button class="nav-item active" data-tab="qa">
@@ -762,22 +844,43 @@
 <div class="main">
   <!-- ========== RAG 问答 ========== -->
   <div class="tab-content active" id="tab-qa">
+    <section class="learning-hero">
+      <h2>AI 工程学不动时，先把卡点说清楚。</h2>
+      <p>StuckToShip 会把课程讲义、项目代码、FAQ、报错经验和评估 trace 连起来，帮你判断卡在哪里、为什么卡、下一步该怎么做。</p>
+      <div class="stuck-grid">
+        <button class="stuck-card" data-example="RAG 在大模型应用里到底解决什么问题？">
+          <strong>概念听不懂</strong>
+          <span>用课程上下文讲清楚，而不是泛泛解释。</span>
+        </button>
+        <button class="stuck-card" data-example="create_app 在 main.py 里是怎么启动项目的？">
+          <strong>代码找不到</strong>
+          <span>定位函数、文件和启动链路。</span>
+        </button>
+        <button class="stuck-card" data-example="ModuleNotFoundError: No module named pymilvus">
+          <strong>报错跑不通</strong>
+          <span>匹配原因、修复步骤和验证命令。</span>
+        </button>
+        <button class="stuck-card" data-example="请给我一个 Agent RAG 的学习路径。">
+          <strong>不知道下一步</strong>
+          <span>按课程路径给出学习顺序。</span>
+        </button>
+      </div>
+    </section>
     <div class="chat-layout">
       <!-- Toolbar -->
       <div class="chat-toolbar">
         <select id="qa-subject">
-          <option value="">全部学科</option>
-          <option>数学</option>
-          <option>语文</option>
-          <option>英语</option>
-          <option>物理</option>
-          <option>化学</option>
+          <option value="">全部方向</option>
+          <option>RAG</option>
+          <option>LLM</option>
+          <option>Agent</option>
+          <option>LangGraph</option>
+          <option>MCP</option>
         </select>
         <select id="qa-grade">
-          <option value="">全部年级</option>
-          <option>一年级</option><option>二年级</option><option>三年级</option>
-          <option>四年级</option><option>五年级</option><option>六年级</option>
-          <option>七年级</option><option>八年级</option><option>九年级</option>
+          <option value="">全部阶段</option>
+          <option>入门</option><option>进阶</option><option>项目实战</option>
+          <option>面试准备</option>
         </select>
         <span class="chat-hint">按 Enter 发送，Shift+Enter 换行</span>
       </div>
@@ -786,8 +889,8 @@
       <div class="chat-messages" id="chat-messages">
         <div class="empty-state" id="chat-empty">
           <div class="icon">💬</div>
-          <p>你好！我是「知学助手」，请告诉我你想了解的知识吧！</p>
-          <p style="font-size:12px;margin-top:8px">例如：勾股定理的公式是什么？</p>
+          <p>你好！我是 StuckToShip。把你卡住的概念、代码、报错或学习路径发给我。</p>
+          <p style="font-size:12px;margin-top:8px">例如：请给我一个 Agent RAG 的学习路径</p>
         </div>
       </div>
 
@@ -832,28 +935,23 @@
         </div>
         <div class="form-row" style="margin-top:16px">
           <div class="form-group">
-            <label for="doc-subject">学科</label>
+            <label for="doc-subject">方向</label>
             <select id="doc-subject">
-              <option>数学</option>
-              <option>语文</option>
-              <option>英语</option>
-              <option>物理</option>
-              <option>化学</option>
+              <option>RAG</option>
+              <option>LLM</option>
+              <option>Agent</option>
+              <option>LangGraph</option>
+              <option>MCP</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="doc-grade">年级</label>
+            <label for="doc-grade">阶段</label>
             <select id="doc-grade">
               <option value="">不限</option>
-              <option>一年级</option>
-              <option>二年级</option>
-              <option>三年级</option>
-              <option>四年级</option>
-              <option>五年级</option>
-              <option>六年级</option>
-              <option>七年级</option>
-              <option>八年级</option>
-              <option>九年级</option>
+              <option>入门</option>
+              <option>进阶</option>
+              <option>项目实战</option>
+              <option>面试准备</option>
             </select>
           </div>
         </div>
@@ -891,8 +989,8 @@
               <tr>
                 <th>标题</th>
                 <th>类型</th>
-                <th>学科</th>
-                <th>年级</th>
+                <th>方向</th>
+                <th>阶段</th>
                 <th>切片数</th>
                 <th>状态</th>
                 <th>时间</th>
@@ -1036,12 +1134,12 @@
                 <input type="number" id="eval-auto-limit" min="1" max="500" value="50">
               </div>
               <div class="eval-field">
-                <label for="eval-auto-subject">学科</label>
-                <input type="text" id="eval-auto-subject" placeholder="全部学科">
+                <label for="eval-auto-subject">方向</label>
+                <input type="text" id="eval-auto-subject" placeholder="全部方向">
               </div>
               <div class="eval-field">
-                <label for="eval-auto-grade">年级</label>
-                <input type="text" id="eval-auto-grade" placeholder="全部年级">
+                <label for="eval-auto-grade">阶段</label>
+                <input type="text" id="eval-auto-grade" placeholder="全部阶段">
               </div>
             </div>
             <p class="eval-auto-hint">从系统自动沉淀的成功 RAG 问答中读取最近样本，适合做 faithfulness、answer_relevancy 回归观察。需要人工标准答案的指标会在自动模式下禁用。</p>
@@ -1156,7 +1254,7 @@ let lastRecordId = '';
 let currentAssistantMsgIdx = -1;
 
 const SESSION_USER_ID = (() => {
-  const key = 'k12_session_uid';
+  const key = 'stucktoship_session_uid';
   let uid = sessionStorage.getItem(key);
   if (!uid) {
     uid = 'ui_' + crypto.randomUUID();
@@ -1166,7 +1264,7 @@ const SESSION_USER_ID = (() => {
 })();
 
 const SESSION_ID = (() => {
-  const key = 'k12_session_id';
+  const key = 'stucktoship_session_id';
   let sessionId = sessionStorage.getItem(key);
   if (!sessionId) {
     sessionId = 'chat_' + crypto.randomUUID();
@@ -1174,6 +1272,14 @@ const SESSION_ID = (() => {
   }
   return sessionId;
 })();
+
+document.querySelectorAll('.stuck-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const input = document.getElementById('chat-input');
+    input.value = card.dataset.example || '';
+    input.focus();
+  });
+});
 
 function onInputKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1195,7 +1301,7 @@ function addUserMessage(text) {
 }
 
 function addAssistantMessage() {
-  const msg = { role: 'assistant', content: '', references: [], record_id: '', latency_ms: 0, complexity: '' };
+  const msg = { role: 'assistant', content: '', references: [], record_id: '', latency_ms: 0, complexity: '', route: '', trace: null };
   chatMessages.push(msg);
   currentAssistantMsgIdx = chatMessages.length - 1;
   renderMessages();
@@ -1221,6 +1327,8 @@ function finalizeAssistant(data) {
   msg.record_id = data.record_id || '';
   msg.latency_ms = data.latency_ms || 0;
   msg.complexity = data.complexity || '';
+  msg.route = data.route || data.complexity || '';
+  msg.trace = data.trace || null;
   lastRecordId = msg.record_id;
   renderMessages();
   scrollChat();
@@ -1255,12 +1363,15 @@ function renderMessages() {
       const streamingClass = (isCurrent && isStreaming) ? 'streaming' : '';
       const content = msg.content || (isCurrent && isStreaming ? '' : '');
       const hasRefs = msg.references && msg.references.length > 0;
+      const routeHtml = msg.route ? `<span class="route-pill">${escapeHtml(msg.route)}</span>` : '';
+      const traceHtml = msg.trace ? `<details class="trace-preview"><summary>Trace</summary><pre>${escapeHtml(JSON.stringify(msg.trace, null, 2).slice(0, 1800))}</pre></details>` : '';
 
       let metaHtml = '';
       if (!isCurrent || !isStreaming) {
         const complexityLabels = { simple: '简单', medium: '一般', complex: '复杂' };
         const compLabel = complexityLabels[msg.complexity] || msg.complexity || '';
         metaHtml = `<div class="message-meta">
+          ${routeHtml}
           ${msg.latency_ms ? `<span>⏱ ${msg.latency_ms}ms</span>` : ''}
           ${compLabel ? `<span>📊 ${compLabel}</span>` : ''}
           ${hasRefs ? `<span class="ref-toggle" onclick="showRefs(${idx})">📄 ${msg.references.length} 篇参考 ▸</span>` : ''}
@@ -1276,6 +1387,7 @@ function renderMessages() {
         <div>
           <div class="message-bubble ${streamingClass}">${escapeHtml(content)}${isCurrent && isStreaming ? '' : ''}</div>
           ${metaHtml}
+          ${traceHtml}
         </div>
       </div>`;
     }
@@ -1388,12 +1500,14 @@ function showRefs(msgIdx) {
 
   list.innerHTML = msg.references.map(ref => {
     const idx = ref.index || '';
-    const src = escapeHtml(ref.source_file || '未知来源');
-    const chapter = ref.chapter ? `<div class="ref-chapter">📖 ${escapeHtml(ref.chapter)}</div>` : '';
+    const src = escapeHtml(ref.source_file || ref.source_path || ref.source || '未知来源');
+    const chapterText = ref.chapter || ref.title || ref.source_type || '';
+    const chapter = chapterText ? `<div class="ref-chapter">📖 ${escapeHtml(chapterText)}</div>` : '';
     const page = ref.page ? ` · 第${ref.page}页` : '';
     const subject = ref.subject ? escapeHtml(ref.subject) : '';
     const grade = ref.grade ? escapeHtml(ref.grade) : '';
-    const metaParts = [subject, grade].filter(Boolean).join(' · ');
+    const lineRange = ref.start_line ? `line ${ref.start_line}${ref.end_line && ref.end_line !== ref.start_line ? '-' + ref.end_line : ''}` : '';
+    const metaParts = [subject, grade, lineRange].filter(Boolean).join(' · ');
     const pct = ref.score != null ? Math.round(ref.score * 100) : 0;
     const metaLine = [`匹配度: ${pct}%`, page, metaParts].filter(Boolean).join(' · ');
     const text = escapeHtml((ref.text || '').substring(0, 200));

@@ -58,6 +58,8 @@ class ProjectCliTests(unittest.TestCase):
             "as",
             "test",
             "eval-sample",
+            "agent-eval",
+            "import-course",
         ]:
             self.assertIn(command, help_text)
 
@@ -180,6 +182,53 @@ class ProjectCliTests(unittest.TestCase):
         self.assertIn("3", command)
         self.assertIn("--no-save", command)
         self.assertIn("faithfulness,answer_relevancy", command)
+
+    def test_agent_eval_command_delegates_to_agent_course_eval_cli(self):
+        calls = []
+
+        def fake_run(command, cwd):
+            calls.append((command, cwd))
+            return subprocess.CompletedProcess(command, 0)
+
+        original_run = self.cli.subprocess.run
+        try:
+            self.cli.subprocess.run = fake_run
+            exit_code = self.cli.main(
+                [
+                    "--root",
+                    str(self.root),
+                    "agent-eval",
+                    "--file",
+                    "data/agent_course_eval/manual_v1.jsonl",
+                    "--json",
+                ]
+            )
+        finally:
+            self.cli.subprocess.run = original_run
+
+        self.assertEqual(0, exit_code)
+        command, cwd = calls[0]
+        self.assertEqual(Path(cwd).resolve(), self.root.resolve())
+        self.assertEqual(command[1:4], ["-m", "evaluation.agent_course_eval", "--file"])
+        self.assertIn("data/agent_course_eval/manual_v1.jsonl", command)
+        self.assertIn("--json", command)
+
+    def test_import_course_command_imports_course_assets(self):
+        source = self.root / "course-data"
+        (source / "courses").mkdir(parents=True)
+        (source / "courses" / "rag.md").write_text("# RAG\nRetrieval before generation.\n", encoding="utf-8")
+
+        exit_code = self.cli.main(
+            [
+                "--root",
+                str(self.root),
+                "import-course",
+                str(source),
+            ]
+        )
+
+        self.assertEqual(0, exit_code)
+        self.assertTrue((self.root / "knowledge" / "courses" / "rag.md").exists())
 
 
 if __name__ == "__main__":

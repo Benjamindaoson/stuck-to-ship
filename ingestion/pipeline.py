@@ -1,4 +1,4 @@
-"""知识库构建流水线：文档加载 → 数据清洗 → 切片 → 向量化 → 入库"""
+﻿"""知识库构建流水线：文档加载 → 数据清洗 → 切片 → 向量化 → 入库"""
 
 import os
 import uuid
@@ -15,13 +15,13 @@ from ingestion.cleaner import (
     CleanStats,
     pre_split_docs,
 )
-from core.vectorestore import K12VectorStore
+from core.vectorestore import StuckToShipVectorStore
 from utils.logger import logger
 
 
 class IngestionPipeline:
 
-    def __init__(self, vector_store: K12VectorStore):
+    def __init__(self, vector_store: StuckToShipVectorStore):
         self.vector_store = vector_store
 
     def process_file(

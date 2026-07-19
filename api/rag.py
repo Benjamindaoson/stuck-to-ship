@@ -37,6 +37,8 @@ async def ask_question(req: AskRequest, request: Request):
             "references": result["references"],
             "latency_ms": result["latency_ms"],
             "complexity": result.get("complexity", "medium"),
+            "route": result.get("route", result.get("complexity", "medium")),
+            "trace": result.get("trace"),
             "record_id": result.get("record_id"),
             "session_id": result["session_id"],
         })

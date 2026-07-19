@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="760" viewBox="0 0 1240 760" role="img" aria-labelledby="title desc">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="760" viewBox="0 0 1240 760" role="img" aria-labelledby="title desc">
   <title id="title">Edu-RAG 系统架构图</title>
   <desc id="desc">展示 Web、CLI、FastAPI、服务层、RAG Graph、文档入库、评估模块和本地数据层之间的关系。</desc>
 
@@ -72,7 +72,7 @@
   <rect x="838" y="252" width="156" height="82" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
   <text x="872" y="280" font-family="Arial, sans-serif" font-size="14" fill="#1e293b">Milvus Lite</text>
   <text x="862" y="303" font-family="Arial, sans-serif" font-size="12" fill="#475569">向量库 / COSINE</text>
-  <text x="866" y="320" font-family="Menlo, Consolas, monospace" font-size="12" fill="#334155">milvus_k12.db</text>
+  <text x="866" y="320" font-family="Menlo, Consolas, monospace" font-size="12" fill="#334155">stucktoship_milvus.db</text>
   <rect x="1026" y="252" width="150" height="82" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
   <text x="1065" y="280" font-family="Arial, sans-serif" font-size="14" fill="#1e293b">BM25</text>
   <text x="1043" y="303" font-family="Arial, sans-serif" font-size="12" fill="#475569">本地稀疏索引</text>
@@ -84,7 +84,7 @@
   <rect x="1026" y="362" width="150" height="76" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
   <text x="1068" y="389" font-family="Arial, sans-serif" font-size="14" fill="#1e293b">SQLite</text>
   <text x="1042" y="411" font-family="Arial, sans-serif" font-size="12" fill="#475569">文档 / QA / 评估</text>
-  <text x="1042" y="427" font-family="Menlo, Consolas, monospace" font-size="12" fill="#334155">k12_business.db</text>
+  <text x="1042" y="427" font-family="Menlo, Consolas, monospace" font-size="12" fill="#334155">stucktoship_business.db</text>
   <rect x="838" y="466" width="156" height="76" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
   <text x="870" y="493" font-family="Arial, sans-serif" font-size="14" fill="#1e293b">本地文件</text>
   <text x="858" y="515" font-family="Arial, sans-serif" font-size="12" fill="#475569">uploaded_docs/</text>

@@ -5,7 +5,7 @@ import sys
 from config import settings
 
 
-def setup_logger(name: str = "k12_rag") -> logging.Logger:
+def setup_logger(name: str = "stucktoship") -> logging.Logger:
     """创建并返回一个配置好的日志器"""
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO))

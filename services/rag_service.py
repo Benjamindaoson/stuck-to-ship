@@ -1,17 +1,20 @@
-"""RAG 问答服务：通过 LangGraph 工作流编排问答流程"""
+﻿"""RAG 问答服务：通过 LangGraph 工作流编排问答流程"""
 
 import time
 import json
 import asyncio
 import uuid
-from typing import AsyncGenerator, Any
+from typing import AsyncGenerator, Any, TYPE_CHECKING
 
 from config import settings
+from core.qa_orchestrator import QAOrchestrator, QAResult
 from core.state import RAGState
 from core.stream_queue import stream_queues
-from core.vectorestore import K12VectorStore
 from models.db_models import AutoEvalSample, QARecord, get_session_maker
 from utils.logger import logger
+
+if TYPE_CHECKING:
+    from core.vectorestore import StuckToShipVectorStore
 
 
 def format_references(docs: list[dict]) -> list[dict]:
@@ -37,15 +40,49 @@ def format_references(docs: list[dict]) -> list[dict]:
     return references
 
 
+def _format_citations(citations: list[dict]) -> list[dict]:
+    references = []
+    for citation in citations:
+        source_path = citation.get("source_path") or citation.get("source_file") or ""
+        line = citation.get("start_line")
+        end_line = citation.get("end_line")
+        if line and end_line and end_line != line:
+            line_text = f"lines {line}-{end_line}"
+        elif line:
+            line_text = f"line {line}"
+        else:
+            line_text = ""
+        references.append(
+            {
+                "index": len(references) + 1,
+                "text": str(citation.get("text") or "")[:400],
+                "source_file": source_path,
+                "source_path": source_path,
+                "chapter": citation.get("title") or line_text,
+                "score": round(float(citation.get("score") or 0.0), 4),
+                "source_type": citation.get("source_type") or "",
+                "start_line": citation.get("start_line"),
+                "end_line": citation.get("end_line"),
+            }
+        )
+    return references
+
+
 ABSTAIN_PREFIX = "抱歉，我暂时没有检索到足够可靠的资料"
 
 
 class RAGService:
     """RAG 问答服务，所有问答流程均通过 LangGraph 工作流编排"""
 
-    def __init__(self, vector_store: K12VectorStore, rag_graph: Any):
+    def __init__(
+        self,
+        vector_store: "StuckToShipVectorStore | None",
+        rag_graph: Any,
+        qa_orchestrator: QAOrchestrator | None = None,
+    ):
         self.vector_store = vector_store
         self.rag_graph = rag_graph
+        self.qa_orchestrator = qa_orchestrator or QAOrchestrator()
 
     @staticmethod
     def resolve_session_id(session_id: str | None, user_id: str | None) -> str:
@@ -100,6 +137,11 @@ class RAGService:
 
         session_id = self.resolve_session_id(session_id, user_id)
         logger.info("会话解析完成: session_id=%s", session_id)
+        orchestrated = self.qa_orchestrator.answer(query, session_id=session_id, user_id=user_id)
+        if self._should_return_orchestrator_result(orchestrated):
+            elapsed = int((time.time() - start_time) * 1000)
+            return self._format_orchestrator_response(orchestrated, elapsed, session_id)
+
         initial_state = self._build_initial_state(query, subject, grade, session_id)
         config = {"configurable": {"thread_id": session_id}}
 
@@ -168,6 +210,34 @@ class RAGService:
             "session_id": session_id,
         }
 
+    @staticmethod
+    def _should_return_orchestrator_result(result: QAResult) -> bool:
+        if result.route == "clarify":
+            return True
+        if result.route in {"code", "faq", "error"}:
+            return result.needs_clarification or bool(result.citations)
+        if result.route in {"course", "learning_path"}:
+            return bool(result.citations)
+        return False
+
+    @staticmethod
+    def _format_orchestrator_response(
+        result: QAResult,
+        latency_ms: int,
+        session_id: str,
+    ) -> dict:
+        trace = {**result.trace, "latency_ms": latency_ms}
+        return {
+            "answer": result.answer,
+            "references": _format_citations(result.citations),
+            "latency_ms": latency_ms,
+            "complexity": result.route,
+            "route": result.route,
+            "trace": trace,
+            "record_id": None,
+            "session_id": session_id,
+        }
+
     async def ask_stream(
         self,
         query: str,
@@ -200,6 +270,17 @@ class RAGService:
 
         session_id = self.resolve_session_id(session_id, user_id)
         logger.info("流式会话解析完成: session_id=%s, queue_id=%s", session_id, queue_id)
+
+        orchestrated = self.qa_orchestrator.answer(query, session_id=session_id, user_id=user_id)
+        if self._should_return_orchestrator_result(orchestrated):
+            elapsed = int((time.time() - start_time) * 1000)
+            result = self._format_orchestrator_response(orchestrated, elapsed, session_id)
+            stream_queues.remove(queue_id)
+            yield _sse("status", {"status": "retrieved", "message": "Using cited Agent course evidence."})
+            yield _sse("token", {"token": result["answer"]})
+            yield _sse("done", result)
+            return
+
         initial_state = self._build_initial_state(query, subject, grade, session_id)
         initial_state["_queue_id"] = queue_id
         config = {"configurable": {"thread_id": session_id}}

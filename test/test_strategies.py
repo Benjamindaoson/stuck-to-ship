@@ -1,4 +1,4 @@
-"""多策略混合检索测试脚本
+﻿"""多策略混合检索测试脚本
 
 测试范围：core.strategies 模块全部组件 + core.nodes.retriever 集成测试
 
@@ -8,6 +8,8 @@
     python test/test_strategies.py --integration-only  # 仅集成测试
     python test/test_strategies.py --verbose       # 详细输出
 """
+
+__test__ = False
 
 import os
 import sys
@@ -224,12 +226,12 @@ _shared_store = None
 
 
 def _get_shared_store():
-    """获取共享的 K12VectorStore 实例（懒加载，整个测试过程只创建一个）"""
+    """获取共享的 StuckToShipVectorStore 实例（懒加载，整个测试过程只创建一个）"""
     global _shared_store
     if _shared_store is None:
         try:
-            from core.vectorestore import K12VectorStore
-            _shared_store = K12VectorStore()
+            from core.vectorestore import StuckToShipVectorStore
+            _shared_store = StuckToShipVectorStore()
             stats = _shared_store.collection_stats
             count = stats.get("row_count", 0)
             if count > 0:

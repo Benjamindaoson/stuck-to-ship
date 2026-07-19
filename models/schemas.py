@@ -2,6 +2,34 @@
 
 from pydantic import BaseModel, Field
 from typing import Any
+from enum import StrEnum
+
+
+class SourceType(StrEnum):
+    """Agent course data source types."""
+
+    course_outline = "course_outline"
+    course_note = "course_note"
+    ppt_text = "ppt_text"
+    transcript = "transcript"
+    project_readme = "project_readme"
+    project_code = "project_code"
+    project_config = "project_config"
+    error_recipe = "error_recipe"
+    faq = "faq"
+    assignment = "assignment"
+    official_doc_summary = "official_doc_summary"
+
+
+class Citation(BaseModel):
+    """Grounding source returned with an answer."""
+
+    source_path: str
+    title: str = ""
+    source_type: str = ""
+    start_line: int | None = None
+    end_line: int | None = None
+    score: float | None = None
 
 
 # ==================== 问答接口 ====================

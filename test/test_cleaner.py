@@ -9,6 +9,8 @@
     python test/test_cleaner.py --verbose       # 详细输出
 """
 
+__test__ = False
+
 import os
 import sys
 import argparse

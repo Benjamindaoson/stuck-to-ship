@@ -1,5 +1,5 @@
-"""
-K12 教育 RAG 系统 — FastAPI 应用入口
+﻿"""
+StuckToShip — FastAPI app entrypoint
 
 启动方式:
     python main.py                 # 直接运行
@@ -9,13 +9,14 @@ K12 教育 RAG 系统 — FastAPI 应用入口
 """
 
 import os
+import importlib.util
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from config import settings
 from utils.logger import logger
@@ -33,17 +34,53 @@ class AppState:
     analytics_service: Any
 
 
+class DisabledVectorStore:
+    """Fallback used when local Milvus Lite is unavailable."""
+
+    @property
+    def collection_stats(self) -> dict:
+        return {"row_count": 0, "status": "disabled", "reason": "milvus_unavailable"}
+
+    def hybrid_search(self, *args, **kwargs) -> list[dict]:
+        return []
+
+    def delete_by_doc_id(self, doc_id: str) -> None:
+        logger.warning("Vector store disabled; skipped delete for doc_id=%s", doc_id)
+
+    def insert_chunks(self, chunks: list[dict]) -> list[int]:
+        raise RuntimeError("Vector store is disabled; configure external Milvus to ingest documents.")
+
+
 def init_vector_store_sync():
     """
     同步初始化向量存储（Milvus Lite）。
     """
-    from core.vectorestore import K12VectorStore
+    if _should_disable_local_vector_store():
+        logger.warning("Vector store disabled: local Milvus Lite is unavailable")
+        return DisabledVectorStore()
+
+    from core.vectorestore import StuckToShipVectorStore
 
     logger.info("正在初始化向量存储（同步）...")
-    vs = K12VectorStore()
+    try:
+        vs = StuckToShipVectorStore()
+    except Exception as exc:
+        if settings.APP_MODE == "agent_course" and "milvus-lite" in str(exc).lower():
+            logger.warning("Vector store disabled: %s", exc)
+            return DisabledVectorStore()
+        raise
     stats = vs.collection_stats
     logger.info(f"向量存储就绪，当前数据量: {stats.get('row_count', 0)} 条")
     return vs
+
+
+def _should_disable_local_vector_store() -> bool:
+    local_uri = settings.MILVUS_URI.endswith(".db") or settings.MILVUS_URI.startswith("./")
+    return (
+        settings.APP_MODE == "agent_course"
+        and local_uri
+        and importlib.util.find_spec("milvus_lite") is None
+    )
 
 
 def init_rag_graph_sync(vector_store):
@@ -56,7 +93,18 @@ def init_rag_graph_sync(vector_store):
     return graph
 
 
-def build_app_state(vector_store: Any | None = None, rag_graph: Any | None = None) -> AppState:
+def init_agent_course_orchestrator_sync():
+    """Build the Agent course MVP router/retrieval orchestrator."""
+    from core.agent_course_loader import build_agent_course_orchestrator
+
+    return build_agent_course_orchestrator()
+
+
+def build_app_state(
+    vector_store: Any | None = None,
+    rag_graph: Any | None = None,
+    qa_orchestrator: Any | None = None,
+) -> AppState:
     """Build all runtime services for the app."""
     from services.analytics_service import AnalyticsService
     from services.document_service import DocumentService
@@ -65,10 +113,11 @@ def build_app_state(vector_store: Any | None = None, rag_graph: Any | None = Non
 
     vector_store = vector_store or init_vector_store_sync()
     rag_graph = rag_graph or init_rag_graph_sync(vector_store)
+    qa_orchestrator = qa_orchestrator or init_agent_course_orchestrator_sync()
     return AppState(
         vector_store=vector_store,
         rag_graph=rag_graph,
-        rag_service=RAGService(vector_store, rag_graph),
+        rag_service=RAGService(vector_store, rag_graph, qa_orchestrator=qa_orchestrator),
         document_service=DocumentService(vector_store),
         knowledge_service=KnowledgeService(),
         analytics_service=AnalyticsService(vector_store),
@@ -96,14 +145,16 @@ async def init_database():
 
 def register_routers(app: FastAPI) -> None:
     """注册 API 路由"""
-    from api import documents, evaluation, rag
+    from api import documents, rag
     # from api import analytics, knowledge  # 暂未开发完成，先隐藏
 
     app.include_router(rag.router)
     app.include_router(documents.router)
     # app.include_router(knowledge.router)   # 知识点模块暂未完成
     # app.include_router(analytics.router)   # 学情分析模块暂未完成
-    app.include_router(evaluation.router)
+    if settings.ENABLE_EVALUATION_API:
+        from api import evaluation
+        app.include_router(evaluation.router)
     logger.info("API 路由注册完成")
 
 
@@ -117,7 +168,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         logger.info("=========================================")
-        logger.info("  K12 教育 RAG 系统 启动中...")
+        logger.info("  StuckToShip 启动中...")
         logger.info(f"  Milvus 模式: Lite (文件: {settings.MILVUS_URI})")
         logger.info(f"  Embedding 模型: {settings.EMBEDDING_MODEL}")
         logger.info(f"  LLM 模型: {settings.LLM_MODEL}")
@@ -137,8 +188,8 @@ def create_app(
         logger.info("系统关闭中...")
 
     app = FastAPI(
-        title="K12 教育 RAG 系统",
-        description="基于 RAG 技术的 K12 教育知识库问答系统，支持文档管理、智能问答、学情分析等功能。",
+        title="StuckToShip",
+        description="AI engineering course tutor for course notes, project code, FAQ, error diagnosis, citations, and evaluation.",
         version="1.0.0",
         lifespan=lifespan,
     )
@@ -151,6 +202,14 @@ def create_app(
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def api_key_auth(request: Request, call_next):
+        if settings.API_KEYS and request.url.path.startswith("/api/"):
+            supplied = _extract_api_key(request)
+            if supplied not in settings.API_KEYS:
+                return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+        return await call_next(request)
+
     if app_state is not None:
         attach_app_state(app, app_state)
 
@@ -161,7 +220,7 @@ def create_app(
         if os.path.exists(html_path):
             return FileResponse(html_path)
         return {
-            "app": "K12 教育 RAG 系统",
+            "app": "StuckToShip",
             "version": "1.0.0",
             "status": "running",
             "docs": "/docs",
@@ -185,6 +244,17 @@ def create_app(
 
     register_routers(app)
     return app
+
+
+def _extract_api_key(request: Request) -> str:
+    header_key = request.headers.get("x-api-key", "").strip()
+    if header_key:
+        return header_key
+    authorization = request.headers.get("authorization", "").strip()
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() == "bearer":
+        return token.strip()
+    return ""
 
 
 app = create_app()

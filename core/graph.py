@@ -1,4 +1,4 @@
-"""K12 RAG 的 LangGraph 编排入口。
+﻿"""AI 工程课程 RAG 的 LangGraph 编排入口。
 
 图中只保存可序列化状态；向量库、重排器等运行时对象通过闭包注入节点，
 避免被 LangGraph checkpointer 持久化。
@@ -21,11 +21,11 @@ from core.reranker import CrossEncoderReranker, RerankerUnavailableError
 from core.retrieval_quality import evaluate_retrieval_gate
 from core.state import MAX_ROUNDS, RAGState
 from core.stream_queue import stream_queues
-from core.vectorestore import K12VectorStore
+from core.vectorestore import StuckToShipVectorStore
 from utils.logger import logger
 
 
-ABSTAIN_ANSWER = "抱歉，我暂时没有检索到足够可靠的资料来回答这个问题。你可以补充教材范围、年级或更具体的问题。"
+ABSTAIN_ANSWER = "抱歉，我暂时没有检索到足够可靠的课程或项目资料来回答这个问题。你可以补充课程章节、项目文件、报错原文或更具体的问题。"
 
 
 async def finalize_node(state: RAGState) -> dict:
@@ -54,7 +54,7 @@ async def classify_node(state: RAGState) -> dict:
     )
     return {"intent": intent, "complexity": complexity}
 
-async def retrieve_node(state: RAGState, vector_store: K12VectorStore) -> dict:
+async def retrieve_node(state: RAGState, vector_store: StuckToShipVectorStore) -> dict:
     """候选召回节点：只负责召回，不在这里做质量判断。"""
     started = time.perf_counter()
     docs, sub_queries = await hybrid_retrieve(
@@ -308,7 +308,7 @@ def _route_by_gate(state: RAGState) -> Literal["accept", "retry", "abstain"]:
 
 
 def build_rag_graph(
-    vector_store: K12VectorStore,
+    vector_store: StuckToShipVectorStore,
     reranker: CrossEncoderReranker | None = None,
     *,
     checkpointer=None,

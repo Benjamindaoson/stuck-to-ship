@@ -1,4 +1,4 @@
-"""文档管理服务：上传、列表、删除文档，支持文件(PDF/MD/TXT)和SQL数据导入"""
+﻿"""文档管理服务：上传、列表、删除文档，支持文件(PDF/MD/TXT)和SQL数据导入"""
 
 import os
 import uuid
@@ -6,14 +6,14 @@ import re
 
 from config import settings
 from ingestion.pipeline import IngestionPipeline
-from core.vectorestore import K12VectorStore
+from core.vectorestore import StuckToShipVectorStore
 from models.db_models import Document, get_session_maker
 from utils.logger import logger
 
 
 class DocumentService:
     """文档管理服务"""
-    def __init__(self, vector_store: K12VectorStore, upload_dir: str | None = None):
+    def __init__(self, vector_store: StuckToShipVectorStore, upload_dir: str | None = None):
         self.vector_store = vector_store
         self.pipeline = IngestionPipeline(vector_store)
         self.upload_dir = upload_dir or settings.UPLOAD_DIR

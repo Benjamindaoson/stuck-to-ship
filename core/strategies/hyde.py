@@ -1,11 +1,11 @@
-"""HyDE 策略：生成假设性答案，用假设答案的 embedding 进行检索"""
+﻿"""HyDE 策略：生成假设性答案，用假设答案的 embedding 进行检索"""
 from core.strategies._llm import llm_complete
 from utils.logger import logger
 
-HYDE_SYSTEM = """你是一个 K12 教育助手。请针对用户的问题，写一段假设性的标准答案。
+HYDE_SYSTEM = """你是 StuckToShip，一个 AI 工程课程助教。请针对用户的问题，写一段假设性的标准答案。
 
 要求：
-1. 内容应像教科书或教辅资料中的标准解释
+1. 内容应像课程讲义或工程项目说明中的标准解释
 2. 包含关键概念和知识点
 3. 即使不确定细节，也尽量写出合理的假设性答案
 4. 长度控制在 100-200 字

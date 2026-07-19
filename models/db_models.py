@@ -110,6 +110,49 @@ class EvaluationRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class FAQEntry(Base):
+    """High-confidence FAQ answer used before heavier RAG."""
+    __tablename__ = "faq_entries"
+
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    category = Column(String(100), default="")
+    tags = Column(Text, default="")
+    priority = Column(Integer, default=0)
+    source = Column(String(255), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ErrorRecipe(Base):
+    """Structured fix recipe for common course/project errors."""
+    __tablename__ = "error_recipes"
+
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    error_pattern = Column(Text, nullable=False)
+    symptom = Column(Text, default="")
+    cause = Column(Text, default="")
+    fix_steps = Column(JSON, default=list)
+    verify_command = Column(Text, default="")
+    tags = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RAGTrace(Base):
+    """Structured trace for each Agent course answer attempt."""
+    __tablename__ = "rag_traces"
+
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String(128), default="", index=True)
+    query = Column(Text, nullable=False)
+    route = Column(String(64), default="", index=True)
+    decision = Column(String(64), default="")
+    candidates = Column(JSON, default=list)
+    evidence = Column(JSON, default=list)
+    latency_ms = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 # ==================== 数据库初始化 ====================
 _engine = None
 _session_maker = None

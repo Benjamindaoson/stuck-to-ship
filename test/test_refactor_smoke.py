@@ -1,4 +1,4 @@
-"""Regression tests for the stable refactor path.
+﻿"""Regression tests for the stable refactor path.
 
 These tests are intentionally small and dependency-light so they can run both
 with pytest discovery and as a plain Python script.
@@ -45,9 +45,9 @@ class AppFactoryTests(unittest.TestCase):
 
         class ExplodingVectorStore:
             def __init__(self):
-                raise AssertionError("K12VectorStore should not be constructed during import")
+                raise AssertionError("StuckToShipVectorStore should not be constructed during import")
 
-        fake_module.K12VectorStore = ExplodingVectorStore
+        fake_module.StuckToShipVectorStore = ExplodingVectorStore
         sys.modules["core.vectorestore"] = fake_module
         try:
             main = importlib.import_module("main")
@@ -108,9 +108,9 @@ class ServiceHelperTests(unittest.TestCase):
         self.assertEqual(len(refs[0]["text"]), 200)
 
     def test_vector_store_rrf_does_not_mutate_inputs(self):
-        from core.vectorestore import K12VectorStore
+        from core.vectorestore import StuckToShipVectorStore
 
-        store = object.__new__(K12VectorStore)
+        store = object.__new__(StuckToShipVectorStore)
         dense = [{"id": 1, "text": "a", "score": 0.9}]
         sparse = [{"id": 1, "text": "a", "score": 12.0}]
 

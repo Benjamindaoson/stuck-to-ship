@@ -1,16 +1,16 @@
-"""学情分析服务：分析学生薄弱知识点、推荐复习内容"""
+﻿"""学情分析服务：分析学生薄弱知识点、推荐复习内容"""
 
 from sqlalchemy import select, func, desc
 
 from models.db_models import QARecord, get_session_maker
-from core.vectorestore import K12VectorStore
+from core.vectorestore import StuckToShipVectorStore
 from utils.logger import logger
 
 
 class AnalyticsService:
     """学情分析服务"""
 
-    def __init__(self, vector_store: K12VectorStore):
+    def __init__(self, vector_store: StuckToShipVectorStore):
         self.vector_store = vector_store
 
     async def get_weak_points(self, user_id: str, subject: str | None = None) -> list[dict]:

@@ -1,4 +1,4 @@
-"""Focused tests for the RAG retrieval quality V1 behavior."""
+﻿"""Focused tests for the RAG retrieval quality V1 behavior."""
 
 from __future__ import annotations
 
@@ -123,9 +123,9 @@ class RerankerTests(unittest.IsolatedAsyncioTestCase):
 
 class VectorStoreScoreTests(unittest.TestCase):
     def test_rrf_preserves_component_scores_without_mutating_inputs(self):
-        from core.vectorestore import K12VectorStore
+        from core.vectorestore import StuckToShipVectorStore
 
-        store = object.__new__(K12VectorStore)
+        store = object.__new__(StuckToShipVectorStore)
         dense = [{"id": 1, "text": "a", "score": 0.9, "dense_raw_score": 0.9}]
         sparse = [{"id": 1, "text": "a", "score": 12.0, "sparse_raw_score": 12.0}]
 

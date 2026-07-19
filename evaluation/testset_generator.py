@@ -1,4 +1,4 @@
-"""测试集生成器：LLM 辅助生成 RAGAS 评估用测试集
+﻿"""测试集生成器：LLM 辅助生成 RAGAS 评估用测试集
 
 支持:
   1. 从向量库文档片段生成 question + ground_truth
@@ -19,7 +19,7 @@ from sqlalchemy import select
 
 from config import settings
 from core.llm import get_chat_model
-from core.vectorestore import K12VectorStore
+from core.vectorestore import StuckToShipVectorStore
 from models.db_models import QARecord, get_session_maker
 from utils.logger import logger
 
@@ -27,7 +27,7 @@ from utils.logger import logger
 # LLM Prompt 模板
 # ---------------------------------------------------------------------------
 
-GEN_QUESTIONS_PROMPT = """你是一个 K12 教育测试专家。根据下面提供的知识点内容，生成高质量的问题和参考答案，用于评估 RAG 问答系统的质量。
+GEN_QUESTIONS_PROMPT = """你是一个 AI 工程课程 教育测试专家。根据下面提供的知识点内容，生成高质量的问题和参考答案，用于评估 RAG 问答系统的质量。
 
 ## 知识点内容
 {context}
@@ -84,7 +84,7 @@ class TestSetGenerator:
     # ------------------------------------------------------------------
     async def from_vectorestore(
         self,
-        vector_store: K12VectorStore,
+        vector_store: StuckToShipVectorStore,
         subject: str | None = None,
         grade: str | None = None,
         count: int = 30,
@@ -229,7 +229,7 @@ class TestSetGenerator:
     # ------------------------------------------------------------------
     @staticmethod
     def _sample_docs(
-        vector_store: K12VectorStore,
+        vector_store: StuckToShipVectorStore,
         subject: str | None,
         grade: str | None,
         count: int = 30,
@@ -304,7 +304,7 @@ class TestSetGenerator:
         try:
             llm = get_chat_model(temperature=0.7, max_tokens=2048, timeout=120.0)
             messages = [
-                SystemMessage(content="你是一个专业的 K12 教育评估专家。"),
+                SystemMessage(content="你是一个专业的 AI 工程课程 教育评估专家。"),
                 HumanMessage(content=prompt),
             ]
             response = await llm.ainvoke(messages)

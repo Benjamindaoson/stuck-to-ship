@@ -25,6 +25,8 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 COMMAND_NAME = "./edu-rag"
 DEFAULT_TIMEOUT = 30
 SUPPORTED_SAMPLE_SUFFIXES = {".pdf", ".md", ".txt"}
@@ -599,9 +601,11 @@ def cmd_test(args: argparse.Namespace) -> int:
         [python, "test/test_refactor_smoke.py"],
         [python, "test/test_project_cli.py"],
     ]
+    test_env = os.environ.copy()
+    test_env["PYTHONIOENCODING"] = "utf-8"
     for command in commands:
         print(f"\n运行: {' '.join(command)}")
-        result = subprocess.run(command, cwd=root)
+        result = subprocess.run(command, cwd=root, env=test_env)
         if result.returncode != 0:
             return result.returncode
     return 0
@@ -612,6 +616,34 @@ def cmd_eval_sample(args: argparse.Namespace) -> int:
     python = resolve_python(root)
     command = [python, "evaluation/cli.py", "validate", "--file", args.file]
     return subprocess.run(command, cwd=root).returncode
+
+
+def cmd_agent_eval(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    command = [
+        resolve_python(root),
+        "-m",
+        "evaluation.agent_course_eval",
+        "--file",
+        args.file,
+        "--min-route-accuracy",
+        str(args.min_route_accuracy),
+    ]
+    if args.json:
+        command.append("--json")
+    return subprocess.run(command, cwd=root).returncode
+
+
+def cmd_import_course(args: argparse.Namespace) -> int:
+    from ingestion.course_importer import import_course_assets
+
+    report = import_course_assets(
+        args.source,
+        Path(args.root).resolve(),
+        overwrite=args.overwrite,
+    )
+    print_json(report)
+    return 0
 
 
 def cmd_auto_score(args: argparse.Namespace) -> int:
@@ -743,6 +775,21 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sample = subparsers.add_parser("eval-sample", help="校验随仓库提供的评估样例")
     eval_sample.add_argument("--file", default="data/test_sets/manual_v1.jsonl", help="测试集路径")
     eval_sample.set_defaults(func=cmd_eval_sample)
+
+    agent_eval = subparsers.add_parser("agent-eval", help="Run Agent course RAG offline evaluation")
+    agent_eval.add_argument(
+        "--file",
+        default="data/agent_course_eval/manual_v1.jsonl",
+        help="Agent course JSONL eval dataset",
+    )
+    agent_eval.add_argument("--json", action="store_true", help="Print JSON report")
+    agent_eval.add_argument("--min-route-accuracy", type=float, default=0.8, help="Minimum route accuracy")
+    agent_eval.set_defaults(func=cmd_agent_eval)
+
+    import_course = subparsers.add_parser("import-course", help="Import validated course assets into knowledge/ and data/")
+    import_course.add_argument("source", help="Source directory with courses/, faq/, errors/, and/or eval/")
+    import_course.add_argument("--overwrite", action="store_true", help="Overwrite existing imported files")
+    import_course.set_defaults(func=cmd_import_course)
 
     return parser
 

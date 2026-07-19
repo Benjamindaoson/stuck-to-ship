@@ -13,6 +13,8 @@ if os.getenv("HF_ENDPOINT"):
 
 
 class Settings:
+    APP_NAME: str = os.getenv("APP_NAME", "StuckToShip")
+
     # ---------- LLM 配置（兼容 OpenAI API 格式）----------
     # 阿里百炼: https://dashscope.aliyuncs.com/compatible-mode/v1
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
@@ -28,8 +30,8 @@ class Settings:
     RAGAS_LLM_MAX_TOKENS: int = int(os.getenv("RAGAS_LLM_MAX_TOKENS", "8192"))
 
     # ---------- Milvus Lite 配置 ----------
-    # 注意: 避免用 MILVUS_URI 命名（pymilvus 内部也读这个环境变量，会冲突）
-    MILVUS_URI: str = os.getenv("K12_MILVUS_URI", "./milvus_k12.db")
+    # Avoid MILVUS_URI because pymilvus also reads that name internally.
+    MILVUS_URI: str = os.getenv("STUCKTOSHIP_MILVUS_URI", "./stucktoship_milvus.db")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", os.path.join(BASE_DIR, "uploaded_docs"))
 
     # ---------- Embedding 配置 ----------
@@ -41,9 +43,26 @@ class Settings:
     ENABLE_LLM_FALLBACK: bool = True     # 是否启用 LLM 兜底
 
     # ---------- 应用配置 ----------
+    APP_MODE: str = os.getenv("APP_MODE", "agent_course")
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
     APP_PORT: int = int(os.getenv("APP_PORT", "8000"))
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    ENABLE_TRACE: bool = os.getenv("ENABLE_TRACE", "true").lower() in {"1", "true", "yes", "on"}
+    ENABLE_FAQ_FIRST: bool = os.getenv("ENABLE_FAQ_FIRST", "true").lower() in {"1", "true", "yes", "on"}
+    ENABLE_EVALUATION_API: bool = os.getenv("ENABLE_EVALUATION_API", "true").lower() in {"1", "true", "yes", "on"}
+    API_KEYS: set[str] = {
+        item.strip()
+        for item in os.getenv("STUCKTOSHIP_API_KEYS", "").split(",")
+        if item.strip()
+    }
+    FAQ_DIRECT_THRESHOLD: float = float(os.getenv("FAQ_DIRECT_THRESHOLD", "0.86"))
+    RETRIEVAL_MIN_SCORE: float = float(os.getenv("RETRIEVAL_MIN_SCORE", "0.45"))
+    CODE_RAG_ROOTS: str = os.getenv("CODE_RAG_ROOTS", ".")
+    KNOWLEDGE_DIR: str = os.getenv("KNOWLEDGE_DIR", os.path.join(BASE_DIR, "knowledge"))
+    EVAL_DATASET: str = os.getenv(
+        "EVAL_DATASET",
+        os.path.join(BASE_DIR, "data", "agent_course_eval", "manual_v1.jsonl"),
+    )
 
     # ---------- 检索参数 ----------
     TOP_K: int = 5                # 检索返回 Top-K 结果
@@ -85,10 +104,10 @@ class Settings:
     MAX_RETRIES: int = max(0, min(2, int(os.getenv("MAX_RETRIES", "2"))))  # Corrective RAG 最大重试次数
 
     # ---------- Milvus 集合名称 ----------
-    MILVUS_COLLECTION: str = "k12_knowledge_base"
+    MILVUS_COLLECTION: str = os.getenv("MILVUS_COLLECTION", "stucktoship_knowledge_base")
 
     # ---------- SQLite 数据库路径 ----------
-    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR}/k12_business.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR}/stucktoship_business.db")
 
 
 settings = Settings()
