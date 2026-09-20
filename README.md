@@ -1,3 +1,5 @@
+> **Repository naming note:** `AIEduRAG` is the legacy repository name. The public product name is **StuckToShip**.
+
 <div align="center">
 
 # StuckToShip
