@@ -1,3 +1,6 @@
+> **Portfolio status / 作品集状态：CASE STUDY · Agent Systems**
+> Independent evidence-grounded AI engineering tutor case study.
+
 > **Repository naming note:** `AIEduRAG` is the legacy repository name. The public product name is **StuckToShip**.
 
 <div align="center">
